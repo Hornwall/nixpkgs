@@ -3,34 +3,64 @@
 , callPackage
 , fetchurl
 , stdenv
+, pkgs
 }:
 let
-  pname = "immersed-vr";
-  version = "9.10";
+  pname = "immersed";
+  version = "10.3.2";
+  system = "x86_64-linux";
 
-  sources = rec {
-    x86_64-linux = {
-      url = "https://web.archive.org/web/20240210075929/https://static.immersed.com/dl/Immersed-x86_64.AppImage";
-      hash = "sha256-Mx8UnV4fZSebj9ah650ZqsL/EIJpM6jl8tYmXJZiJpA=";
-    };
-    x86_64-darwin = {
-      url = "https://web.archive.org/web/20240210075929/https://static.immersed.com/dl/Immersed.dmg";
-      hash = "sha256-CR2KylovlS7zerZIEScnadm4+ENNhib5QnS6z5Ihv1Y=";
-    };
-    aarch64-darwin = x86_64-darwin;
+  src = fetchurl {
+    url = "https://static.immersed.com/dl/Immersed-x86_64.AppImage";
+    hash = "sha256-baor2NPCxHnBuPCaXy8eLQDXawEz480Z4LzjGflsCq0=";
   };
 
-  src = fetchurl (sources.${stdenv.system} or (throw "Unsupported system: ${stdenv.system}"));
+  extraPkgs = pkgs: with pkgs; [
+    gst_all_1.gstreamer
+    gst_all_1.gstreamermm
+    gst_all_1.gst-vaapi
+    gst_all_1.gst-libav
+    gst_all_1.gst-plugins-rs
+    gst_all_1.gst-plugins-ugly
+    gst_all_1.gst-plugins-good
+    gst_all_1.gst-plugins-base
+    pipewire
+    vaapiVdpau
+    vaapiIntel
+    amdvlk
+    libvdpau-va-gl
+    libva-utils
+    libva
+    mesa
+    libva-minimal
+    libva1-minimal
+    libva1
+    intel-media-driver
+    libdrm
+    linuxPackages.v4l2loopback
+    v4l-utils
+    libv4l
+    wayland
+    wayland-utils
+    gdk-pixbuf
+    gdk-pixbuf-xlib
+    glib
+    glib-networking
+    gtk3
+    libcanberra-gtk3
+    libcanberra
+  ];
 
   meta = with lib; {
     description = "A VR coworking platform";
     homepage = "https://immersed.com";
     license = licenses.unfree;
     maintainers = with maintainers; [ haruki7049 ];
-    platforms = builtins.attrNames sources;
+    platforms = [ "x86_64-linux" ];
     sourceProvenance = with sourceTypes; [ binaryNativeCode ];
   };
-
-in if stdenv.isDarwin
-then callPackage ./darwin.nix { inherit pname version src meta; }
-else callPackage ./linux.nix { inherit pname version src meta; }
+in
+  appimageTools.wrapType2 rec {
+    inherit pname version src meta;
+    name = "${pname}-${version}";
+  }
